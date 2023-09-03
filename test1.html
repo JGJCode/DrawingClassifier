@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw!</title>
+    
+    <style>
+        * {
+        	overflow: hidden;
+        }
+        body {
+        	text-align: center;
+        }
+        h1 {
+        	color: black;
+        }
+        .box {
+            width: 900px;
+            height: 500px;
+            border: 1px solid black;
+            padding: 10px;
+            margin: 10px;
+            margin-left: auto;
+            margin-right: auto;
+            }
+        .left{
+            float:left;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+<body>
+    <div class="box">
+        <canvas id="canvas"></canvas>
+    </div>
+    
+    
+    <div class="left" id="resultContainer" style="display: none;">
+        <h1>Your Drawing</h1>
+        <img id="Drawing" alt="Your Drawing" width="640" height="301.5">
+        <h2>The Machine Learning Model classified it as <span id="classificationResult"></span></h2>
+        <img id="Test" width="1" height="1" style="display: none;">
+    </div>
+        <button id="submitButton" class="button">Submit!</button>
+        <button id="refreshButton" class="button">Restart</button>
+    <script>
+        var notEmpty = false;
+        window.addEventListener('load', () => {
+            resize();
+            document.addEventListener('mousedown', startPainting);
+            document.addEventListener('mouseup', stopPainting);
+            document.addEventListener('mousemove', sketch);
+            window.addEventListener('resize', resize);
+        });
+
+        const canvas = document.querySelector('#canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            ctx.canvas.width = window.innerWidth;
+            ctx.canvas.height = window.innerHeight;
+        }
+
+        let coord = { x: 0, y: 0 };
+        let paint = false;
+
+        function getPosition(event) {
+            coord.x = event.clientX - canvas.offsetLeft;
+            coord.y = event.clientY - canvas.offsetTop;
+        }
+
+        function startPainting(event) {
+            notEmpty = true;
+            paint = true;
+            getPosition(event);
+        }
+
+        function stopPainting() {
+            paint = false;
+        }
+
+        function sketch(event) {
+            if (event.type === 'click') {
+            drawDot(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
+            return;
+        }
+
+        if (!paint) return;
+        ctx.beginPath();
+            
+        ctx.lineWidth = 5;
+        
+        ctx.lineCap = 'round';
+            
+        ctx.strokeStyle = 'black';
+            
+        ctx.moveTo(coord.x, coord.y);
+        
+
+        getPosition(event);
+        
+        ctx.lineTo(coord.x , coord.y);
+            
+        ctx.stroke();
+
+        const submitButton = document.getElementById('submitButton');
+        submitButton.addEventListener('click', submit);
+
+        function captureBox() {
+            var canvas1 = document.getElementById("canvas");
+            return canvas1.toDataURL();
+        }
+        let doodleClassifier;
+        let resultsDiv;
+        let boxURL;
+        function preload(){
+        doodleClassifier=ml5.imageClassifier('DoodleNet',modelReady);
+        }
+        function modelReady(){
+            doodleClassifier.classify(canvas,gotResults);
+        }
+        function submit() {
+            if (!notEmpty) {
+                alert('Draw on the canvas');
+                    return;
+            }
+            boxURL = captureBox();
+            const drawing = document.getElementById('Drawing');
+            drawing.src = boxURL;
+            const submitButton=document.getElementById('submitButton');
+            submitButton.style.display='none';
+            preload()
+            const canvasContainer = document.querySelector('.box');
+            const resultContainer = document.getElementById('resultContainer');
+            canvasContainer.style.display = 'none';
+            resultContainer.style.display = 'block';
+        }
+        function gotResults(error,results){
+            if(error){
+                console.error(error);
+                return;
+            }
+            /*console.log(results);
+            let content=`${results[0].label} ${nf(100*results[0].confidence,2,)}`
+            resultsDiv.html(content)*/
+            console.log(results);
+    
+            const classificationResultSpan = document.getElementById('classificationResult');
+            const resultLabel = results[0].label;
+            const resultConfidence = (results[0].confidence * 100).toFixed(2);
+            classificationResultSpan.innerHTML = `${resultLabel} with ${resultConfidence}% confidence`;
+        }
+
+           
+        }
+        const refreshButton = document.getElementById('refreshButton');
+        refreshButton.addEventListener('click', refresh);
+
+        function refresh() {
+            window.location.href='/draw'
+        }
+    </script>
+</body>
+
+</html>
